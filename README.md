@@ -1,7 +1,7 @@
 Cyber Threat Detection
 ==============================
 
-A machine learning project to detect network breaches from PCAP files
+A machine learning project to detect network breaches from PCAP files.
 
 Project Organization
 ------------
