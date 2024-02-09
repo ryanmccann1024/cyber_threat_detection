@@ -46,7 +46,7 @@ class MakeDataset:
     def _plot_hist(data, title):
         num_bins = int(np.ceil(1 + np.log2(len(data))))
         plt.figure(figsize=(12, 6), dpi=300)
-        sns.histplot(data, num_bins=num_bins, kde=True, edgecolor='black')
+        sns.histplot(data, bins=num_bins, kde=True, edgecolor='black')
 
         plt.title(f'Histogram of {title} Feature', fontweight='bold')
         plt.xlabel('Values', fontweight='bold')
