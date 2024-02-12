@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 
 import pandas as pd
 
@@ -10,8 +11,8 @@ PCAP_YEAR = '2018'
 class MakeDataset:
     def __init__(self):
         self.input_df = None
-        self.dtypes_dict = {}
-        self.parse_dates = []
+        self.dtypes_dict = dict()
+        self.parse_dates = list()
 
     def clean_columns(self):
         self.input_df.columns = [
@@ -44,10 +45,7 @@ class MakeDataset:
     def convert_dtypes(self, curr_df: pd.DataFrame):
         for col, dtype in self.dtypes_dict.items():
             if col in curr_df.columns:
-                try:
-                    curr_df[col] = curr_df[col].astype(dtype)
-                except ValueError:
-                    curr_df[col] = pd.to_numeric(curr_df[col], errors='coerce')
+                curr_df[col] = curr_df[col].astype(dtype)
 
         if self.parse_dates:
             for col in self.parse_dates:
@@ -55,6 +53,15 @@ class MakeDataset:
                     curr_df[col] = pd.to_datetime(curr_df[col], errors='coerce')
 
         return curr_df
+
+    @staticmethod
+    def remove_repeat_headers(df: pd.DataFrame, header_list: list):
+        headers_joined = ''.join(header_list).lower().replace(' ', '_')
+        mask = df.apply(lambda x: ''.join(x.astype(str)).lower().replace(' ', '_').replace('.1', ''),
+                        axis=1) == headers_joined
+
+        df = df[~mask]
+        return df
 
     def read_data(self):
         self.input_df = pd.DataFrame()
@@ -67,6 +74,7 @@ class MakeDataset:
 
             curr_df = pd.read_csv(pcap_fp, encoding='latin1', skipinitialspace=True, low_memory=False)
             curr_df.columns = curr_df.columns.str.strip()
+            curr_df = self.remove_repeat_headers(curr_df, self.input_df.columns.tolist())
             curr_df = self.convert_dtypes(curr_df=curr_df)
 
             self.input_df = pd.concat([self.input_df, curr_df], ignore_index=True)
