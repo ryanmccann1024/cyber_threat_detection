@@ -1,11 +1,10 @@
 import os
 import re
-import copy
 
 import pandas as pd
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEAR = '2018'
+PCAP_YEAR = '2017'
 
 
 class MakeDataset:
@@ -68,6 +67,8 @@ class MakeDataset:
         curr_fp = os.path.join(BASE_FP, PCAP_YEAR)
         pcap_files = os.listdir(curr_fp)
         for curr_file in pcap_files:
+            print(f'Began reading:\t\t\t{curr_file} from {PCAP_YEAR}')
+
             pcap_fp = os.path.join(curr_fp, curr_file)
             if self.dtypes_dict == {}:
                 self.make_dtypes_dict(sample_fp=pcap_fp)
@@ -78,7 +79,7 @@ class MakeDataset:
             curr_df = self.convert_dtypes(curr_df=curr_df)
 
             self.input_df = pd.concat([self.input_df, curr_df], ignore_index=True)
-            print(f'Completed reading:\t\t{curr_file} from {PCAP_YEAR}')
+            print(f'Completed reading:\t\t\t{curr_file} from {PCAP_YEAR}')
 
     def make_dataset(self):
         self.read_data()

@@ -63,17 +63,24 @@ def square_root_choice(data):
     return num_bins
 
 
-def _plot_pie(data, title):
+def _plot_pie(data, title, plot_labels=True):
     value_counts = data.value_counts()
     plt.figure(figsize=(8, 8))
-    patches, texts, autotexts = plt.pie(value_counts, labels=value_counts.index, autopct='%1.2f%%', startangle=140)
 
-    for autotext in autotexts:
-        autotext.set_color('white')
-        autotext.set_size('x-large')
+    if plot_labels:
+        patches, texts, autotexts = plt.pie(value_counts, startangle=140, autopct='%1.1f%%')
+    else:
+        patches, texts = plt.pie(value_counts, startangle=140)
+        autotexts = []
 
-    plt.legend(patches, [f'{label}: {count}' for label, count in zip(value_counts.index, value_counts)],
-               loc='center left', bbox_to_anchor=(1, 0.5))
+    if not plot_labels:
+        for autotext in autotexts:
+            autotext.set_visible(False)
+
+    percentages = [f'{(count / value_counts.sum()) * 100:.1f}%' for count in value_counts]
+    legend_labels = [f'{label}: {count} ({perc})' for label, count, perc in
+                     zip(value_counts.index, value_counts, percentages)]
+    plt.legend(patches, legend_labels, loc='center left', bbox_to_anchor=(1, 0.5))
 
     plt.title(f'Pie Chart of {title}', fontweight='bold')
     plt.ylabel('')
@@ -113,8 +120,8 @@ def plot_column_data(input_df: pd.DataFrame):
                 _plot_pie(data=non_null_data, title=column_title)
             else:
                 _plot_hist(data=non_null_data, title=column_title)
-        else:
-            print('Is not numeric.')
+        elif column == 'label':
+            _plot_pie(data=input_df[column], title='Output Features', plot_labels=False)
 
 
 input_fp = os.path.join('..', '..', 'data', 'processed', f'pcap_data_{PCAP_YEAR}.csv')
