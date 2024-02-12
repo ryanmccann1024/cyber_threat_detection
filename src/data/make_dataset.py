@@ -4,7 +4,7 @@ import re
 import pandas as pd
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEAR = '2017'
+PCAP_YEAR = '2018'
 
 
 class MakeDataset:
@@ -44,12 +44,15 @@ class MakeDataset:
     def convert_dtypes(self, curr_df: pd.DataFrame):
         for col, dtype in self.dtypes_dict.items():
             if col in curr_df.columns:
-                curr_df[col] = curr_df[col].astype(dtype)
+                try:
+                    curr_df[col] = curr_df[col].astype(dtype)
+                except ValueError:
+                    curr_df[col] = pd.to_numeric(curr_df[col], errors='coerce')
 
         if self.parse_dates:
             for col in self.parse_dates:
                 if col in curr_df.columns:
-                    curr_df[col] = pd.to_datetime(curr_df[col])
+                    curr_df[col] = pd.to_datetime(curr_df[col], errors='coerce')
 
         return curr_df
 
@@ -62,7 +65,7 @@ class MakeDataset:
             if self.dtypes_dict == {}:
                 self.make_dtypes_dict(sample_fp=pcap_fp)
 
-            curr_df = pd.read_csv(pcap_fp, encoding='latin1', skipinitialspace=True)
+            curr_df = pd.read_csv(pcap_fp, encoding='latin1', skipinitialspace=True, low_memory=False)
             curr_df.columns = curr_df.columns.str.strip()
             curr_df = self.convert_dtypes(curr_df=curr_df)
 
