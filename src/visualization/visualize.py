@@ -2,11 +2,13 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import pandas as pd
 import seaborn as sns
 from scipy.stats import skew
 
 PCAP_YEAR = '2017'
+VERSION = 'v0'
 SAVE_FP = os.path.join('..', '..', 'reports', 'figures')
 
 
@@ -86,7 +88,7 @@ def _plot_pie(data, title, plot_labels=True):
     plt.ylabel('')
     plt.tight_layout()
 
-    save_fp = os.path.join(SAVE_FP, PCAP_YEAR, 'pie_charts', f'{title}_{PCAP_YEAR}.png')
+    save_fp = os.path.join(SAVE_FP, f"{PCAP_YEAR}_{VERSION}", 'pie_charts', f'{title}_{PCAP_YEAR}.png')
     plt.savefig(save_fp)
     plt.close()
 
@@ -97,12 +99,21 @@ def _plot_hist(data, title):
     sns.histplot(data, bins=num_bins, kde=False, edgecolor='black')
 
     plt.yscale('log')
+    y_ticks = [10 ** x for x in range(-1, 8)]
+    plt.yticks(y_ticks)
+
+    def log_format(x, pos):
+        return r'$10^{%d}$' % (np.log10(x))
+
+    # Apply the formatter
+    plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(log_format))
+
     plt.title(f'Histogram of {title} - {PCAP_YEAR}', fontweight='bold')
     plt.xlabel('Values', fontweight='bold')
     plt.ylabel('Frequency (Log Scale)', fontweight='bold')
     plt.grid(True)
 
-    save_fp = os.path.join(SAVE_FP, PCAP_YEAR, 'histograms', f'{title}_{PCAP_YEAR}.png')
+    save_fp = os.path.join(SAVE_FP, f"{PCAP_YEAR}_{VERSION}", 'histograms', f'{title}_{PCAP_YEAR}.png')
     plt.savefig(save_fp)
     plt.close()
 
