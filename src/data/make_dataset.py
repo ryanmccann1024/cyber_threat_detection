@@ -3,8 +3,10 @@ import re
 
 import pandas as pd
 
+from make_dataset_args import STANDARD_COLS_DICT
+
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEAR = '2017'
+PCAP_YEARS_LIST = ['2018']
 
 
 class MakeDataset:
@@ -13,8 +15,10 @@ class MakeDataset:
         self.dtypes_dict = dict()
         self.parse_dates = list()
 
+        self.pcap_year = None
+
     def clean_columns(self):
-        self.input_df.columns = [
+        cleaned_columns = [
             re.sub(r'\.1$', '',
                    re.sub(r'ss\b', 's',
                           re.sub(r'/', '',
@@ -22,6 +26,9 @@ class MakeDataset:
                                         column.strip().lower().replace(' ', '_')))))
             for column in self.input_df.columns
         ]
+
+        final_columns = [STANDARD_COLS_DICT.get(column, column) for column in cleaned_columns]
+        self.input_df.columns = final_columns
 
     def make_dtypes_dict(self, sample_fp: str):
         sample_df = pd.read_csv(sample_fp, nrows=1000)
@@ -64,10 +71,10 @@ class MakeDataset:
 
     def read_data(self):
         self.input_df = pd.DataFrame()
-        curr_fp = os.path.join(BASE_FP, PCAP_YEAR)
+        curr_fp = os.path.join(BASE_FP, self.pcap_year)
         pcap_files = os.listdir(curr_fp)
         for curr_file in pcap_files:
-            print(f'Began reading:\t\t\t{curr_file} from {PCAP_YEAR}')
+            print(f'Began reading:\t\t\t{curr_file} from {self.pcap_year}')
 
             pcap_fp = os.path.join(curr_fp, curr_file)
             if self.dtypes_dict == {}:
@@ -79,14 +86,17 @@ class MakeDataset:
             curr_df = self.convert_dtypes(curr_df=curr_df)
 
             self.input_df = pd.concat([self.input_df, curr_df], ignore_index=True)
-            print(f'Completed reading:\t\t\t{curr_file} from {PCAP_YEAR}')
+            print(f'Completed reading:\t\t\t{curr_file} from {self.pcap_year}')
 
     def make_dataset(self):
-        self.read_data()
-        self.clean_columns()
+        for pcap_year in PCAP_YEARS_LIST:
+            self.pcap_year = pcap_year
 
-        save_fp = os.path.join('..', '..', 'data', 'processed', f'pcap_data_{PCAP_YEAR}.csv')
-        self.input_df.to_csv(save_fp, index=False)
+            self.read_data()
+            self.clean_columns()
+
+            save_fp = os.path.join('..', '..', 'data', 'processed', f'pcap_data_{pcap_year}.csv')
+            self.input_df.to_csv(save_fp, index=False)
 
 
 if __name__ == '__main__':
