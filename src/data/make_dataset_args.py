@@ -11,7 +11,7 @@ STANDARD_COLS_DICT = {
     'bwd_pkt_len_max': 'bwd_packet_length_max',
     'bwd_pkt_len_min': 'bwd_packet_length_min',
     'bwd_pkt_len_mean': 'bwd_packet_length_mean',
-    'nwd_pkt_len_std': 'bwd_packet_length_std',
+    'bwd_pkt_len_std': 'bwd_packet_length_std',
     'flow_byts': 'flow_bytes',
     'flow_pkts': 'flow_packets',
     'fwd_iat_tot': 'fwd_iat_total',
@@ -47,6 +47,7 @@ STANDARD_COLS_DICT = {
     'subflow_bwd_byts': 'subflow_bwd_bytes',
     'init_fwd_win_byts': 'init_win_bytes_forward',
     'init_bwd_win_byts': 'init_win_bytes_backward',
-    'fwd_act_data_pkts': 'ack_data_pkt_fwd',
+    'fwd_act_data_pkts': 'act_data_pkt_fwd',
     'fwd_seg_size_min': 'min_seg_size_forward',
+    'fwd_header_length.1': 'fwd_header_length',
 }
