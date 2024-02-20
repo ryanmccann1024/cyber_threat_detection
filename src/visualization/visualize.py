@@ -7,9 +7,13 @@ import pandas as pd
 import seaborn as sns
 from scipy.stats import skew
 
-PCAP_YEAR = '2017'
+PCAP_YEARS_LIST = ['2017', '2018']
 VERSION = 'v0'
 SAVE_FP = os.path.join('..', '..', 'reports', 'figures')
+COLOR_MAP = {
+    '2017': 'darkred',
+    '2018': 'navy',
+}
 
 
 def _to_title_case(text):
@@ -65,7 +69,7 @@ def square_root_choice(data):
     return num_bins
 
 
-def _plot_pie(data, title, plot_labels=True):
+def _plot_pie(data, title, pcap_year, plot_labels=True):
     value_counts = data.value_counts()
     plt.figure(figsize=(8, 8))
 
@@ -88,53 +92,70 @@ def _plot_pie(data, title, plot_labels=True):
     plt.ylabel('')
     plt.tight_layout()
 
-    save_fp = os.path.join(SAVE_FP, f"{PCAP_YEAR}_{VERSION}", 'pie_charts', f'{title}_{PCAP_YEAR}.png')
+    save_fp = os.path.join(SAVE_FP, f"{pcap_year}_{VERSION}", 'pie_charts', f'{title}_{pcap_year}.png')
     plt.savefig(save_fp)
     plt.close()
 
 
-def _plot_hist(data, title):
-    num_bins = doanes_formula(data=data)
+def plot_histograms(data_dict, title, plot_density=False):
     plt.figure(figsize=(12, 6))
-    sns.histplot(data, bins=num_bins, kde=False, edgecolor='black')
+    palette = sns.color_palette("deep", len(data_dict))
 
-    plt.yscale('log')
-    y_ticks = [10 ** x for x in range(-1, 8)]
-    plt.yticks(y_ticks)
+    for idx, (year, data) in enumerate(data_dict.items()):
+        num_bins = 20
+        if plot_density:
+            sns.histplot(data, bins=num_bins, kde=False, edgecolor='black', color=palette[idx],
+                         label=f'Year {year}', stat='density')
+        else:
+            sns.histplot(data, bins=num_bins, kde=False, edgecolor='black', color=palette[idx],
+                         label=f'Year {year}')
+            plt.title(f'Density Histogram of {title}', fontweight='bold')
 
-    def log_format(x, pos):
-        return r'$10^{%d}$' % (np.log10(x))
+            plt.yscale('log')
+            y_ticks = [10 ** x for x in range(-1, 8)]
+            plt.yticks(y_ticks)
 
-    # Apply the formatter
-    plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(log_format))
+            def log_format(x, pos):
+                return r'$10^{%d}$' % (np.log10(x))
 
-    plt.title(f'Histogram of {title} - {PCAP_YEAR}', fontweight='bold')
+            plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(log_format))
+            plt.title(f'Histogram of {title}', fontweight='bold')
+
     plt.xlabel('Values', fontweight='bold')
     plt.ylabel('Frequency (Log Scale)', fontweight='bold')
     plt.grid(True)
+    plt.legend()
 
-    save_fp = os.path.join(SAVE_FP, f"{PCAP_YEAR}_{VERSION}", 'histograms', f'{title}_{PCAP_YEAR}.png')
+    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'histograms', f'{title}.png')
     plt.savefig(save_fp)
     plt.close()
 
 
-def plot_column_data(input_df: pd.DataFrame):
-    for column in input_df.columns:
-        is_numeric = input_df[column].dtype.kind in 'biufc'
+def collect_and_plot_data(PCAP_YEARS_LIST):
+    all_data = {year: pd.read_csv(os.path.join('..', '..', 'data', 'processed', f'pcap_data_{year}.csv'))
+                for year in PCAP_YEARS_LIST}
+
+    # num_bins_list, bin_widths_list = manual_num_bins(data=all_data)
+    for column in all_data[PCAP_YEARS_LIST[0]].columns:
+        # Does not exist in 2018 data
+        if column == 'source_port':
+            continue
+        is_numeric = all_data[PCAP_YEARS_LIST[0]][column].dtype.kind in 'biufc'
         if is_numeric:
-            non_null_data = input_df[column].dropna()
+            data_dict = {}
+            for year, df in all_data.items():
+                # fixme
+                if column == 'fwd_header_length.1':
+                    column = 'fwd_header_length'
+
+                non_null_data = df[column].dropna()
+                data_dict[year] = non_null_data
+
             column_title = _to_title_case(column)
-
-            data_range = non_null_data.max() - non_null_data.min()
-
-            if data_range < 10:
-                _plot_pie(data=non_null_data, title=column_title)
-            else:
-                _plot_hist(data=non_null_data, title=column_title)
+            plot_histograms(data_dict, column_title)
         elif column == 'label':
-            _plot_pie(data=input_df[column], title='Output Features', plot_labels=False)
+            for year, df in all_data.items():
+                _plot_pie(data=df[column], title='Output Features', pcap_year=year, plot_labels=False)
 
 
-input_fp = os.path.join('..', '..', 'data', 'processed', f'pcap_data_{PCAP_YEAR}.csv')
-input_df = pd.read_csv(input_fp)
-plot_column_data(input_df=input_df)
+collect_and_plot_data(PCAP_YEARS_LIST)
