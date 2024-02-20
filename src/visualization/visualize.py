@@ -202,7 +202,8 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
     heatmap.set_ylabel('Features', fontsize=14, fontweight='bold')
     plt.xticks(rotation=45)
     plt.yticks(rotation=0)
-    plt.show()
+    save_fp = os.path.join(SAVE_FP, f"{VERSION}", f'p_value_heat.png')
+    plt.savefig(save_fp)
 
 
 collect_and_plot_data(PCAP_YEARS_LIST)
