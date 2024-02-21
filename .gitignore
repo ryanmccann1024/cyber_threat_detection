@@ -81,6 +81,8 @@ target/
 # Mac OS-specific storage files
 .DS_Store
 
+reports/figures/*
+
 # vim
 *.swp
 *.swo
