@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import pandas as pd
 import seaborn as sns
-from scipy.stats import skew
-from scipy.stats import ks_2samp, anderson_ksamp, ttest_ind, chi2_contingency
+from scipy.stats import ttest_ind, ks_2samp, anderson_ksamp
 
 PCAP_YEARS_LIST = ['2017', '2018']
 VERSION = 'v0'
@@ -15,55 +14,6 @@ SAVE_FP = os.path.join('..', '..', 'reports', 'figures')
 
 def _to_title_case(text):
     return text.title().replace('_', ' ')
-
-
-def freedman_diaconis_rule(data):
-    IQR = np.subtract(*np.percentile(data, [75, 25]))
-    bin_width = 2 * IQR * (len(data) ** (-1 / 3))
-    data_range = np.max(data) - np.min(data)
-    num_bins = int(np.ceil(data_range / bin_width))
-    return num_bins
-
-
-def scotts_rule(data):
-    std_dev = np.std(data, ddof=1)
-    n = len(data)
-    bin_width = (3.5 * std_dev) / (n ** (1 / 3))
-    data_range = np.max(data) - np.min(data)
-    num_bins = int(np.ceil(data_range / bin_width))
-    return num_bins
-
-
-def rice_rule(data):
-    num_bins = int(2 * (len(data) ** (1 / 3)))
-    return num_bins
-
-
-def doanes_formula(data):
-    n = len(data)
-    if n <= 1:
-        return 1
-
-    g1 = skew(data)
-    if np.isnan(g1) or np.isinf(g1):
-        return sturges_rule(data=data)
-
-    sigma_g1 = ((6 * (n - 2)) / ((n + 1) * (n + 3))) ** 0.5
-    if sigma_g1 == 0:
-        return sturges_rule(data=data)
-
-    num_bins = int(1 + np.log2(n) + np.log2(1 + abs(g1) / sigma_g1))
-    return max(num_bins, 1)
-
-
-def sturges_rule(data):
-    num_bins = int(np.ceil(1 + np.log2(len(data))))
-    return num_bins
-
-
-def square_root_choice(data):
-    num_bins = int(np.sqrt(len(data)))
-    return num_bins
 
 
 def _plot_pie(data, title, pcap_year, plot_labels=True):
@@ -94,26 +44,36 @@ def _plot_pie(data, title, pcap_year, plot_labels=True):
     plt.close()
 
 
-def kolmogorov_smirnov_test(data1, data2):
-    D, p_value = ks_2samp(data1, data2)
-    return D, p_value
+def _get_dists(input_df, column):
+    dist_one = input_df[input_df['Year'] == '2017'][column].dropna().values
+    dist_two = input_df[input_df['Year'] == '2018'][column].dropna().values
+
+    return dist_one, dist_two
 
 
-def anderson_darling_test(data1, data2):
+def welch_t_test(input_df, column):
+    dist_one, dist_two = _get_dists(input_df=input_df, column=column)
+    result = ttest_ind(dist_one, dist_two, equal_var=False)
+    return result
+
+
+def kolmogorov_test(input_df, column):
+    dist_one, dist_two = _get_dists(input_df=input_df, column=column)
+    result = ks_2samp(dist_one, dist_two)
+    return result
+
+
+def anderson_test(input_df, column):
+    dist_one, dist_two = _get_dists(input_df=input_df, column=column)
     try:
-        result = anderson_ksamp([data1, data2])
+        result = anderson_ksamp([dist_one, dist_two])
     except ValueError:
         return None
 
-    return result.statistic, result.critical_values, result.significance_level
+    return result
 
 
-def welchs_t_test(data1, data2):
-    t_statistic, p_value = ttest_ind(data1, data2, equal_var=False)
-    return t_statistic, p_value
-
-
-def plot_histograms(input_df, column, plot_density=False):
+def plot_histograms(input_df, column, log_scale=False):
     input_df[column] = input_df[column].dropna()
     title = _to_title_case(column)
     plot_df = input_df[[column, 'Year']]
@@ -121,13 +81,16 @@ def plot_histograms(input_df, column, plot_density=False):
     color_palette = sns.color_palette("bright", n_colors=len(plot_df['Year'].unique()))
 
     num_bins = 30
-    if plot_density:
+    if not log_scale:
         sns.histplot(plot_df, bins=num_bins, x=column, kde=False, edgecolor='black', hue='Year',
-                     stat='density', palette=color_palette)
-        plt.title(f'Density Histogram of {title}', fontweight='bold')
+                     palette=color_palette)
+        title = f'{title}.png'
+
+        plt.ylabel('Frequency', fontweight='bold')
     else:
         sns.histplot(plot_df, bins=num_bins, x=column, kde=False, edgecolor='black', hue='Year',
                      palette=color_palette)
+        title = f'{title}_log.png'
 
         plt.yscale('log')
         y_ticks = [10 ** x for x in range(-1, 8)]
@@ -139,34 +102,40 @@ def plot_histograms(input_df, column, plot_density=False):
         plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(log_format))
         plt.title(f'Histogram of {title}', fontweight='bold')
 
-    data_2017 = plot_df[plot_df['Year'] == '2017'][column].values
-    data_2018 = plot_df[plot_df['Year'] == '2018'][column].values
-
-    kolmogorov_smirnov_result = kolmogorov_smirnov_test(data_2017, data_2018)
-    anderson_darling_result = anderson_darling_test(data_2017, data_2018)
-    welchs_t_test_result = welchs_t_test(data_2017, data_2018)
-
-    if anderson_darling_result is None:
-        ad_test_str = "AD: None"
-        anderson_darling_result = [np.nan, np.nan, np.nan]
-    else:
-        ad_test_str = f"AD test: stat={anderson_darling_result[0]:.2f}, p={anderson_darling_result[2]:.2f}"
-
-    ks_test_str = f"KS test: D={kolmogorov_smirnov_result[0]:.2f}, p={kolmogorov_smirnov_result[1]:.2e}"
-    t_test_str = f"Welch's t-test: t={welchs_t_test_result[0]:.2f}, p={welchs_t_test_result[1]:.2e}"
-    test_result_str = f"{ks_test_str} | {ad_test_str} | {t_test_str}"
+        plt.ylabel('Frequency (Log scale)', fontweight='bold')
 
     plt.xlabel('Values', fontweight='bold')
-    plt.ylabel('Frequency (Log scale)', fontweight='bold')
     plt.grid(True)
-    plt.legend([f'2017 {test_result_str}',
-                f'2018'])
+    plt.legend(['2017', '2018'])
 
-    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'histograms', f'{title}.png')
+    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'histograms', title)
     plt.savefig(save_fp)
     plt.close()
 
-    return kolmogorov_smirnov_result[1], anderson_darling_result[2], welchs_t_test_result[1]
+
+def plot_p_values(feature_names, p_values_dict, n_features=10):
+    bar_width = 0.3
+    index = np.arange(n_features)
+
+    selected_features = np.random.choice(feature_names, size=n_features, replace=False)
+
+    fig, ax = plt.subplots(figsize=(12, 6), dpi=200)
+
+    for i, test in enumerate(p_values_dict.keys()):
+        selected_p_values = [p_values_dict[test][feature_names.index(feature)] for feature in selected_features]
+        ax.bar(index + i * bar_width, selected_p_values, bar_width, label=test)
+
+    ax.set_xlabel('Features', fontweight='bold')
+    ax.set_ylabel('P-value', fontweight='bold')
+    ax.set_title('Features vs. P-values', fontweight='bold')
+    ax.set_xticks(index + bar_width * len(p_values_dict.keys()) / 2)
+    ax.set_xticklabels(selected_features, rotation=45, ha='right')
+    ax.set_yscale('log')
+    ax.legend()
+
+    plt.tight_layout()
+    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'p_values.png')
+    plt.savefig(save_fp)
 
 
 def collect_and_plot_data(PCAP_YEARS_LIST):
@@ -177,7 +146,8 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
 
     combined_df = pd.concat(all_data.values(), ignore_index=True)
 
-    test_results = {}
+    p_values_dict = {test: [] for test in ['Welch', 'Kolmogorov', 'Anderson']}
+    feature_names = []
     for column in all_data[PCAP_YEARS_LIST[0]].columns:
         # Does not exist in 2018 data
         if column == 'source_port':
@@ -187,23 +157,24 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
             if column == 'fwd_header_length.1':
                 column = 'fwd_header_length'
 
-            ks_p_value, ad_p_value, welch_p_value = plot_histograms(combined_df, column)
-            test_results[column] = {'KS p-value': ks_p_value, 'AD p-value': ad_p_value, 'Welch p-value': welch_p_value}
+            # TODO: Keep track of things excluded from anderson?
+            welch_result = welch_t_test(input_df=combined_df, column=column)
+            kolmogorov_result = kolmogorov_test(input_df=combined_df, column=column)
+            anderson_result = anderson_test(input_df=combined_df, column=column)
+
+            plot_histograms(combined_df, column)
+            if anderson_result is None:
+                continue
+
+            p_values_dict['Welch'].append(welch_result.pvalue)
+            p_values_dict['Kolmogorov'].append(kolmogorov_result.pvalue)
+            p_values_dict['Anderson'].append(anderson_result.pvalue)
+            feature_names.append(column)
         elif column == 'label':
             for year, df in all_data.items():
                 _plot_pie(data=df[column], title='Output Features', pcap_year=year, plot_labels=False)
 
-    test_results_df = pd.DataFrame.from_dict(test_results, orient='index')
-
-    plt.figure(figsize=(14, 10))
-    heatmap = sns.heatmap(test_results_df, cmap='coolwarm', linewidths=0.2, linecolor='black')
-    heatmap.set_title('P-values Heatmap', fontsize=18, fontweight='bold')
-    heatmap.set_xlabel('P-values', fontsize=14, fontweight='bold')
-    heatmap.set_ylabel('Features', fontsize=14, fontweight='bold')
-    plt.xticks(rotation=45)
-    plt.yticks(rotation=0)
-    save_fp = os.path.join(SAVE_FP, f"{VERSION}", f'p_value_heat.png')
-    plt.savefig(save_fp)
+    plot_p_values(feature_names=feature_names, p_values_dict=p_values_dict)
 
 
 collect_and_plot_data(PCAP_YEARS_LIST)
