@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import pandas as pd
 import seaborn as sns
-from scipy.stats import ttest_ind, ks_2samp, anderson_ksamp
+from scipy.stats import ttest_ind, ks_2samp, anderson_ksamp, mannwhitneyu
 
 PCAP_YEARS_LIST = ['2017', '2018']
 VERSION = 'v0'
@@ -54,6 +54,12 @@ def _get_dists(input_df, column):
 def welch_t_test(input_df, column):
     dist_one, dist_two = _get_dists(input_df=input_df, column=column)
     result = ttest_ind(dist_one, dist_two, equal_var=False)
+    return result
+
+
+def mann_test(input_df, column):
+    dist_one, dist_two = _get_dists(input_df=input_df, column=column)
+    result = mannwhitneyu(dist_one, dist_two)
     return result
 
 
@@ -146,7 +152,7 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
 
     combined_df = pd.concat(all_data.values(), ignore_index=True)
 
-    p_values_dict = {test: [] for test in ['Welch', 'Kolmogorov', 'Anderson']}
+    p_values_dict = {test: [] for test in ['Mann', 'Kolmogorov']}
     feature_names = []
     for column in all_data[PCAP_YEARS_LIST[0]].columns:
         # Does not exist in 2018 data
@@ -157,18 +163,13 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
             if column == 'fwd_header_length.1':
                 column = 'fwd_header_length'
 
-            # TODO: Keep track of things excluded from anderson?
-            welch_result = welch_t_test(input_df=combined_df, column=column)
+            mann_result = mann_test(input_df=combined_df, column=column)
             kolmogorov_result = kolmogorov_test(input_df=combined_df, column=column)
-            anderson_result = anderson_test(input_df=combined_df, column=column)
 
             plot_histograms(combined_df, column)
-            if anderson_result is None:
-                continue
 
-            p_values_dict['Welch'].append(welch_result.pvalue)
+            p_values_dict['Mann'].append(mann_result.pvalue)
             p_values_dict['Kolmogorov'].append(kolmogorov_result.pvalue)
-            p_values_dict['Anderson'].append(anderson_result.pvalue)
             feature_names.append(column)
         elif column == 'label':
             for year, df in all_data.items():
