@@ -8,7 +8,7 @@ import seaborn as sns
 from scipy.stats import ttest_ind, ks_2samp, anderson_ksamp, mannwhitneyu
 
 PCAP_YEARS_LIST = ['2017', '2018']
-VERSION = 'v0'
+VERSION = 'v1'
 SAVE_FP = os.path.join('..', '..', 'reports', 'figures')
 
 
@@ -16,7 +16,7 @@ def _to_title_case(text):
     return text.title().replace('_', ' ')
 
 
-def _plot_pie(data, title, pcap_year, plot_labels=True):
+def _plot_pie(data, title, pcap_year=None, plot_labels=True):
     value_counts = data.value_counts()
     plt.figure(figsize=(8, 8))
 
@@ -39,7 +39,10 @@ def _plot_pie(data, title, pcap_year, plot_labels=True):
     plt.ylabel('')
     plt.tight_layout()
 
-    save_fp = os.path.join(SAVE_FP, f"{pcap_year}_{VERSION}", 'pie_charts', f'{title}_{pcap_year}.png')
+    if pcap_year is None:
+        save_fp = os.path.join(SAVE_FP, f'{title}.png')
+    else:
+        save_fp = os.path.join(SAVE_FP, f"{pcap_year}_{VERSION}", 'pie_charts', f'{title}_{pcap_year}.png')
     plt.savefig(save_fp)
     plt.close()
 
@@ -79,7 +82,7 @@ def anderson_test(input_df, column):
     return result
 
 
-def plot_histograms(input_df, column, log_scale=False):
+def plot_histograms(input_df, column, log_scale=False, probability=True):
     input_df[column] = input_df[column].dropna()
     title = _to_title_case(column)
     plot_df = input_df[[column, 'Year']]
@@ -87,16 +90,22 @@ def plot_histograms(input_df, column, log_scale=False):
     color_palette = sns.color_palette("bright", n_colors=len(plot_df['Year'].unique()))
 
     num_bins = 30
-    if not log_scale:
+    if not log_scale and not probability:
         sns.histplot(plot_df, bins=num_bins, x=column, kde=False, edgecolor='black', hue='Year',
                      palette=color_palette)
-        title = f'{title}.png'
+        title = f'{title}'
 
         plt.ylabel('Frequency', fontweight='bold')
+    elif probability:
+        title = f'{title} Percentages'
+        sns.histplot(plot_df, bins=num_bins, x=column, kde=False, edgecolor='black', hue='Year',
+                     palette=color_palette, stat='percent')
+
+        plt.ylabel('Percent', fontweight='bold')
     else:
         sns.histplot(plot_df, bins=num_bins, x=column, kde=False, edgecolor='black', hue='Year',
                      palette=color_palette)
-        title = f'{title}_log.png'
+        title = f'{title} Log'
 
         plt.yscale('log')
         y_ticks = [10 ** x for x in range(-1, 8)]
@@ -106,15 +115,16 @@ def plot_histograms(input_df, column, log_scale=False):
             return r'$10^{%d}$' % (np.log10(x))
 
         plt.gca().yaxis.set_major_formatter(ticker.FuncFormatter(log_format))
-        plt.title(f'Histogram of {title}', fontweight='bold')
 
         plt.ylabel('Frequency (Log scale)', fontweight='bold')
 
+    plt.title(f'Histogram of {title}', fontweight='bold')
     plt.xlabel('Values', fontweight='bold')
     plt.grid(True)
-    plt.legend(['2017', '2018'])
+    years = input_df['Year'].unique()
+    plt.legend(years.astype(str))
 
-    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'histograms', title)
+    save_fp = os.path.join(SAVE_FP, f"{VERSION}", 'histograms', f'{title}.png')
     plt.savefig(save_fp)
     plt.close()
 
@@ -144,7 +154,7 @@ def plot_p_values(feature_names, p_values_dict, n_features=10):
     plt.savefig(save_fp)
 
 
-def collect_and_plot_data(PCAP_YEARS_LIST):
+def collect_and_plot_data():
     all_data = {year: pd.read_csv(os.path.join('..', '..', 'data', 'processed', f'pcap_data_{year}.csv'))
                 for year in PCAP_YEARS_LIST}
     for year, df in all_data.items():
@@ -154,6 +164,7 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
 
     p_values_dict = {test: [] for test in ['Mann', 'Kolmogorov']}
     feature_names = []
+
     for column in all_data[PCAP_YEARS_LIST[0]].columns:
         # Does not exist in 2018 data
         if column == 'source_port':
@@ -178,4 +189,11 @@ def collect_and_plot_data(PCAP_YEARS_LIST):
     plot_p_values(feature_names=feature_names, p_values_dict=p_values_dict)
 
 
-collect_and_plot_data(PCAP_YEARS_LIST)
+def plot_data():
+    for file_name in ('train', 'test'):
+        fp = os.path.join('..', '..', 'data', 'processed', f'{file_name}_{VERSION}.csv')
+        train_csv = pd.read_csv(fp)
+        _plot_pie(data=train_csv['label'], title=f'{file_name.title()} Output Features', plot_labels=False)
+
+
+collect_and_plot_data()
