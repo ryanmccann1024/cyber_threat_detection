@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from make_dataset_args import STANDARD_COLS_DICT
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEARS_LIST = ['2017', '2018']
+PCAP_YEARS_LIST = ['2018']
 
 
 class MakeDataset:
@@ -19,6 +19,11 @@ class MakeDataset:
         self.pcap_year = None
 
     def clean_columns(self):
+        drop_columns = ['Flow_ID', 'Src_IP', 'Dst_IP']
+        for column in drop_columns:
+            if column in self.input_df.columns:
+                self.input_df = self.input_df.drop(column, axis=1)
+
         cleaned_columns = [
             re.sub(r'\.1$', '',
                    re.sub(r'ss\b', 's',
@@ -131,6 +136,6 @@ class MakeDataset:
 
 if __name__ == '__main__':
     make_data_obj = MakeDataset()
-    # make_data_obj.make_dataset()
+    make_data_obj.make_dataset()
 
-    make_data_obj.split_datasets(test_size=0.2)
+    # make_data_obj.split_datasets(test_size=0.2)
