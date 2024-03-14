@@ -9,8 +9,8 @@ from scipy import stats
 from make_dataset_args import STANDARD_COLS_DICT
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEARS_LIST = ['2018']
-VERSION = 'v2'
+PCAP_YEARS_LIST = ['2017']
+VERSION = 'v3'
 
 
 class MakeDataset:
@@ -34,8 +34,8 @@ class MakeDataset:
                     self.input_df[column] = stats.zscore(self.input_df[column])
 
     def clean_columns(self):
-        # TODO: Check these
-        drop_columns = ['Timestamp', 'Flow ID', 'Src IP', 'Source IP', 'Dst IP', 'Destination IP', 'Fwd Header Length']
+        drop_columns = ['Timestamp', 'Flow ID', 'Src IP', 'Source IP', 'Dst IP', 'Destination IP', 'Fwd Header Length',
+                        'Source Port', 'Src Port']
         for column in drop_columns:
             if column in self.input_df.columns:
                 self.input_df = self.input_df.drop(column, axis=1)
