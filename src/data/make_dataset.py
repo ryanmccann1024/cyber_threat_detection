@@ -26,12 +26,22 @@ class MakeDataset:
         category_columns = ['ack_flag_count', 'bwd_psh_flags', 'cwe_flag_count', 'ece_flag_count', 'fin_flag_count',
                             'fwd_psh_flags', 'fwd_urg_flags', 'protocol', 'psh_flag_count', 'rst_flag_count',
                             'syn_flag_count', 'urg_flag_count', 'label', 'destination_port', 'timestamp',
-                            'bwd_urg_flags', 'flow_bytes', 'flow_packets']
+                            'bwd_urg_flags', 'flow_bytes']
         for column in self.input_df.columns:
             if column not in category_columns:
+                self.input_df[column] = self.input_df[column].astype(float)
+                if pd.isna(self.input_df[column]).any() or np.isinf(self.input_df[column]).any():
+                    print(f"Column '{column}' contains NaN or inf values. "
+                          f"Removing them.")
+                    self.input_df.dropna(subset=[column], inplace=True)
+
                 if not np.all(self.input_df[column] == 0):
-                    self.input_df[column] = stats.zscore(self.input_df[column])
-                    self.input_df[column] = stats.zscore(self.input_df[column])
+                    z_score_col = self.input_df[column].copy()
+                    z_score_col = stats.zscore(z_score_col)
+                    if pd.isna(z_score_col).any() or np.isinf(z_score_col).any():
+                        continue
+
+                    self.input_df[column] = z_score_col
 
     def clean_columns(self):
         drop_columns = ['Timestamp', 'Flow ID', 'Src IP', 'Source IP', 'Dst IP', 'Destination IP', 'Fwd Header Length',
