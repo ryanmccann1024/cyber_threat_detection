@@ -6,10 +6,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from scipy import stats
 
-from make_dataset_args import STANDARD_COLS_DICT
+from make_dataset_args import STANDARD_COLS_LABELS_DICT
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
-PCAP_YEARS_LIST = ['2017']
+PCAP_YEARS_LIST = ['2018']
 VERSION = 'v3'
 
 
@@ -43,6 +43,20 @@ class MakeDataset:
 
                     self.input_df[column] = z_score_col
 
+    def clean_labels(self):
+        check_labels = set()
+        for i, label in enumerate(self.input_df['label']):
+            label = re.sub(r'\.1$', '', re.sub(r'ss\b', 's', re.sub(r'/', '', re.sub(r'/bulk', '_bulk',
+                                                                                     label.strip().lower().replace(' ',
+                                                                                                                   '_')))))
+            if label in STANDARD_COLS_LABELS_DICT.keys():
+                label = STANDARD_COLS_LABELS_DICT.get(label, label)
+
+            check_labels.add(label)
+            self.input_df['label'][i] = label
+
+        print(check_labels)
+
     def clean_columns(self):
         drop_columns = ['Timestamp', 'Flow ID', 'Src IP', 'Source IP', 'Dst IP', 'Destination IP', 'Fwd Header Length',
                         'Source Port', 'Src Port']
@@ -59,7 +73,7 @@ class MakeDataset:
             for column in self.input_df.columns
         ]
 
-        final_columns = [STANDARD_COLS_DICT.get(column, column) for column in cleaned_columns]
+        final_columns = [STANDARD_COLS_LABELS_DICT.get(column, column) for column in cleaned_columns]
         self.input_df.columns = final_columns
 
     def make_dtypes_dict(self, sample_fp: str):
@@ -133,6 +147,7 @@ class MakeDataset:
 
             self.read_data()
             self.clean_columns()
+            self.clean_labels()
             self.normalize()
 
             save_fp = os.path.join('..', '..', 'data', 'interim', f'pcap_data_{pcap_year}.csv')
