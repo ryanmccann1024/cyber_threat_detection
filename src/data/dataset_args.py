@@ -50,7 +50,7 @@ STANDARD_COLS_LABELS_DICT = {
     'fwd_act_data_pkts': 'act_data_pkt_fwd',
     'fwd_seg_size_min': 'min_seg_size_forward',
     'fwd_header_length.1': 'fwd_header_length',
-    # TODO: These are labels, double check (Need to clean labels?)
+
     'ddos_attack_hoic': 'ddos',
     'ddos_attacks_loic_udp': 'ddos',
     'ddos_attacks_loic_http': 'ddos',
@@ -61,7 +61,8 @@ STANDARD_COLS_LABELS_DICT = {
     'dos_attacks_slowloris': 'dos_slowloris',
     'ftp_bruteforce': 'ftp_patator',
     'brute_force_web': 'web_attack_brute_force',
-    'sql_injection': 'web_attack_sql_force',
-    'brute_force_xs': 'web_attack_sql_xss',
+    'sql_injection': 'web_attack_sql',
+    'brute_force_xs': 'web_attack_xss',
     'ssh_bruteforce': 'ssh_patator',
+    'web_attack_xs': 'web_attack_xss',
 }
