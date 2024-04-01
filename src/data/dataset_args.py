@@ -52,8 +52,8 @@ STANDARD_COLS_LABELS_DICT = {
     'fwd_header_length.1': 'fwd_header_length',
     # TODO: These are labels, double check (Need to clean labels?)
     'ddos_attack_hoic': 'ddos',
-    'ddos_attack_loic_udp': 'ddos',
-    'ddos_attack_loic_http': 'ddos',
+    'ddos_attacks_loic_udp': 'ddos',
+    'ddos_attacks_loic_http': 'ddos',
     'dos_attacks_goldeneye': 'dos_goldeneye',
     'dos_attacks_hulk': 'dos_hulk',
     'dos_attacks_slowhttptest': 'dos_slowhttptest',
@@ -62,5 +62,6 @@ STANDARD_COLS_LABELS_DICT = {
     'ftp_bruteforce': 'ftp_patator',
     'brute_force_web': 'web_attack_brute_force',
     'sql_injection': 'web_attack_sql_force',
-    'brute_force_xss': 'web_attack_sql_xss',
+    'brute_force_xs': 'web_attack_sql_xss',
+    'ssh_bruteforce': 'ssh_patator',
 }

@@ -6,11 +6,13 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from scipy import stats
 
-from make_dataset_args import STANDARD_COLS_LABELS_DICT
+from dataset_args import STANDARD_COLS_LABELS_DICT
 
 BASE_FP = os.path.join('..', '..', 'data', 'external')
+BASE_FP = '/work/pi_vinod_vokkarane_uml_edu/data/ryan/spring_2024/cyber_threat_detection'
+
 PCAP_YEARS_LIST = ['2018']
-VERSION = 'v3'
+VERSION = 'v4'
 
 
 class MakeDataset:
@@ -46,9 +48,13 @@ class MakeDataset:
     def clean_labels(self):
         check_labels = set()
         for i, label in enumerate(self.input_df['label']):
-            label = re.sub(r'\.1$', '', re.sub(r'ss\b', 's', re.sub(r'/', '', re.sub(r'/bulk', '_bulk',
+            if not pd.isna(label):
+                label = re.sub(r'\.1$', '', re.sub(r'ss\b', 's', re.sub(r'/', '', re.sub(r'/bulk', '_bulk',
                                                                                      label.strip().lower().replace(' ',
                                                                                                                    '_')))))
+                label = re.sub(r'\x96', '', label)
+                label = re.sub(r'-', '_', label)
+                label = re.sub(r'__', '_', label)
             if label in STANDARD_COLS_LABELS_DICT.keys():
                 label = STANDARD_COLS_LABELS_DICT.get(label, label)
 
@@ -185,6 +191,6 @@ class MakeDataset:
 
 if __name__ == '__main__':
     make_data_obj = MakeDataset()
-    make_data_obj.make_dataset()
+    # make_data_obj.make_dataset()
 
-    # make_data_obj.split_datasets(test_size=0.2)
+    make_data_obj.split_datasets(test_size=0.2)
